@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Cotizador IA - Regional 2025</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-light: #818cf8;
+      --primary-dark: #4f46e5;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+      min-height: 100vh;
+    }
+    
+    .option-card {
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 2px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: white;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+    }
+    
+    .option-card:hover {
+      border-color: var(--primary-light);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(99, 102, 241, 0.1);
+    }
+    
+    .option-card.selected {
+      border-color: var(--primary);
+      background: #eef2ff;
+      box-shadow: 0 5px 15px rgba(99, 102, 241, 0.15);
+    }
+    
+    .option-card input {
+      display: none;
+    }
+    
+    .checkmark {
+      width: 1.25rem;
+      height: 1.25rem;
+      border: 2px solid #c7d2fe;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      flex-shrink: 0;
+    }
+    
+    .option-card.selected .checkmark {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+    
+    .option-card.selected .checkmark::after {
+      content: '';
+      position: absolute;
+      width: 0.4rem;
+      height: 0.8rem;
+      border: 2px solid white;
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg) translate(-1px, -1px);
+    }
+    
+    .progress-bar {
+      transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    .summary-card {
+      background: #f8fafc;
+      border-left: 4px solid var(--primary);
+      transition: all 0.3s ease;
+    }
+    
+    .recurring-cost {
+      border: 1px dashed #f59e0b;
+      background: #fffbeb;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.2); }
+      70% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+    
+    /* Mejor diseño del deslizador */
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: #e5e7eb;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+    
+    input[type="range"]:hover {
+      background: #d1d5db;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+    }
+    
+    input[type="range"]::-webkit-slider-thumb:hover {
+      background: var(--primary-dark);
+      transform: scale(1.1);
+    }
+    
+    input[type="range"]::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+    }
+    
+    input[type="range"]::-moz-range-thumb:hover {
+      background: var(--primary-dark);
+      transform: scale(1.1);
+    }
+    
+    .floating-btn {
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .floating-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+    
+    .highlight {
+      animation: highlight 1.5s ease;
+    }
+    
+    @keyframes highlight {
+      0% { background-color: rgba(99, 102, 241, 0.1); }
+      100% { background-color: transparent; }
+    }
+    
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 15px 25px;
+      border-radius: 12px;
+      background: #10b981;
+      color: white;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+      z-index: 1000;
+      transform: translateX(120%);
+      transition: transform 0.5s ease;
+    }
+    
+    .notification.show {
+      transform: translateX(0);
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <!-- Notificación -->
+  <div id="notification" class="notification hidden">
+    <i class="fas fa-check-circle mr-2"></i>
+    <span id="notification-text">Acción completada con éxito</span>
+  </div>
+  
+  <div class="container mx-auto px-4 py-8 max-w-5xl">
+    <header class="mb-8 text-center space-y-4">
+      <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 px-6 rounded-2xl inline-block">
+        <h1 class="text-3xl md:text-4xl font-bold">Cotizador de Automatización con IA</h1>
+      </div>
+      <p class="text-base md:text-lg text-gray-600 max-w-2xl mx-auto">
+        Rangos de precios actualizados a 2025 basados en tarifas horarias promedio por región 
+        (<a href="https://www.remotecrew.io/blog/software-developer-per-hour-rate-by-country" 
+           class="text-indigo-600 hover:underline font-medium" target="_blank">remotecrew.io</a>)
+      </p>
+    </header>
+
+    <div class="flex flex-col lg:flex-row gap-6">
+      <!-- Formulario principal -->
+      <div class="lg:w-2/3">
+        <!-- Region selector -->
+        <section class="mb-6 bg-white shadow-lg rounded-2xl p-5 border border-gray-100">
+          <label for="region-select" class="block text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+            <i class="fas fa-globe-americas text-indigo-500"></i>
+            Región de ejecución del proyecto
+          </label>
+          <select id="region-select" class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 bg-white focus:border-indigo-500 focus:ring-indigo-500">
+            <option value="latam">Latinoamérica (base)</option>
+            <option value="na">Norteamérica</option>
+            <option value="we">Europa Occidental</option>
+            <option value="ee">Europa Oriental</option>
+            <option value="asia">Asia (Sur/Sudeste)</option>
+            <option value="africa">África / MENA</option>
+          </select>
+          <p class="text-sm text-gray-500 mt-2">
+            <i class="fas fa-info-circle text-indigo-500 mr-1"></i>
+            Tarifa horaria: <span id="hourly-rate" class="font-medium">$45</span>
+          </p>
+        </section>
+
+        <!-- Quote form -->
+        <form id="quote-form" class="space-y-6 bg-white shadow-lg border border-gray-100 rounded-2xl p-6">
+          <!-- Nivel de automatización -->
+          <section class="highlight">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <i class="fas fa-robot text-indigo-500"></i>
+              Nivel de Automatización
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label class="option-card selected" for="auto-basic">
+                <input id="auto-basic" type="radio" name="automation-level" value="basic" checked />
+                <span class="checkmark"></span>
+                <div>
+                  <div class="font-medium">Básica</div>
+                  <div class="text-sm text-gray-500">80 h de ingeniería</div>
+                </div>
+              </label>
+              <label class="option-card" for="auto-advanced">
+                <input id="auto-advanced" type="radio" name="automation-level" value="advanced" />
+                <span class="checkmark"></span>
+                <div>
+                  <div class="font-medium">Avanzada</div>
+                  <div class="text-sm text-gray-500">240 h de ingeniería</div>
+                </div>
+              </label>
+            </div>
+          </section>
+
+          <!-- Número de flujos -->
+          <section class="highlight">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <i class="fas fa-stream text-indigo-500"></i>
+              Número de Flujos de Automatización
+            </h2>
+            <div>
+              <div class="flex justify-between mb-1">
+                <span class="text-sm text-gray-600">Flujos (≥1)</span>
+                <span id="flow-value" class="text-lg font-semibold text-indigo-700">1</span>
+              </div>
+              <input id="automation-flows" type="range" min="1" max="10" value="1" class="w-full" />
+              <p class="text-xs text-gray-500 mt-1">
+                <i class="fas fa-info-circle text-indigo-500 mr-1"></i>
+                Cada flujo adicional agrega 8 h de desarrollo.
+              </p>
+            </div>
+          </section>
+
+          <!-- Uso de IA -->
+          <section class="highlight">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <i class="fas fa-brain text-indigo-500"></i>
+              Uso de Inteligencia Artificial
+            </h2>
+            <div class="space-y-3">
+              <label class="option-card selected" for="ai-none">
+                <input id="ai-none" type="radio" name="ai-usage" value="none" checked />
+                <span class="checkmark"></span>
+                <div>
+                  <div class="font-medium">Sin agente IA</div>
+                  <div class="text-sm text-gray-500">0 h adicionales</div>
+                </div>
+              </label>
+              <label class="option-card" for="ai-single">
+                <input id="ai-single" type="radio" name="ai-usage" value="single" />
+                <span class="checkmark"></span>
+                <div>
+                  <div class="font-medium">1 agente IA</div>
+                  <div class="text-sm text-gray-500">40 h adicionales</div>
+                </div>
+              </label>
+              <label class="option-card" for="ai-multi">
+                <input id="ai-multi" type="radio" name="ai-usage" value="multi" />
+                <span class="checkmark"></span>
+                <div>
+                  <div class="font-medium">Multiagente IA</div>
+                  <div class="text-sm text-gray-500">160 h adicionales</div>
+                </div>
+              </label>
+            </div>
+          </section>
+
+          <!-- Integración -->
+          <section class="highlight">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <i class="fas fa-plug text-indigo-500"></i>
+              Complejidad de Integración
+            </h2>
+            <select id="integration-level" class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 bg-white focus:border-indigo-500 focus:ring-indigo-500">
+              <option value="simple">1-2 sistemas (40 h)</option>
+              <option value="complex">3+ sistemas (120 h)</option>
+            </select>
+          </section>
+
+          <!-- Soporte -->
+          <section class="highlight">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <i class="fas fa-headset text-indigo-500"></i>
+              Soporte & Mantenimiento Mensual
+            </h2>
+            <div class="space-y-3">
+              <label class="option-card selected" for="sup-none">
+                <input id="sup-none" type="radio" name="support-level" value="none" checked />
+                <span class="checkmark"></span>
+                <div>
+                  <div class="font-medium">Sin soporte</div>
+                  <div class="text-sm text-gray-500">0 h/mes</div>
+                </div>
+              </label>
+              <label class="option-card" for="sup-basic">
+                <input id="sup-basic" type="radio" name="support-level" value="basic" />
+                <span class="checkmark"></span>
+                <div>
+                  <div class="font-medium">Soporte básico</div>
+                  <div class="text-sm text-gray-500">20 h/mes</div>
+                </div>
+              </label>
+              <label class="option-card" for="sup-advanced">
+                <input id="sup-advanced" type="radio" name="support-level" value="advanced" />
+                <span class="checkmark"></span>
+                <div>
+                  <div class="font-medium">Soporte avanzado</div>
+                  <div class="text-sm text-gray-500">60 h/mes</div>
+                </div>
+              </label>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+              <i class="fas fa-exclamation-circle text-amber-500 mr-1"></i>
+              * El costo de soporte es recurrente mensual y no está incluido en el total inicial
+            </p>
+          </section>
+        </form>
+      </div>
+
+      <!-- Panel de resumen y precio -->
+      <div class="lg:w-1/3">
+        <!-- Price indicator -->
+        <div class="bg-white shadow-lg border border-gray-100 rounded-2xl mb-6 sticky top-4">
+          <div class="p-6 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-purple-50">
+            <div class="flex justify-between mb-2">
+              <span class="text-sm font-medium text-gray-700">Presupuesto estimado (USD)</span>
+              <span id="price-indicator" class="text-2xl font-bold text-indigo-700">$0</span>
+            </div>
+            <div class="h-3 bg-gray-100 rounded-full overflow-hidden mb-4">
+              <div id="price-progress" class="progress-bar h-full bg-gradient-to-r from-indigo-500 to-purple-600" style="width:0%"></div>
+            </div>
+            
+            <div class="text-sm text-gray-600 mb-1">Desglose de horas:</div>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between">
+                <span>Automatización:</span>
+                <span id="auto-hours" class="font-medium">0 h</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Flujos adicionales:</span>
+                <span id="flow-hours" class="font-medium">0 h</span>
+              </div>
+              <div class="flex justify-between">
+                <span>IA:</span>
+                <span id="ai-hours" class="font-medium">0 h</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Integración:</span>
+                <span id="integ-hours" class="font-medium">0 h</span>
+              </div>
+              <div class="flex justify-between font-semibold border-t border-gray-200 pt-2 mt-1">
+                <span>Total horas:</span>
+                <span id="total-hours" class="text-indigo-700">0 h</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Soporte recurrente -->
+          <div id="support-container" class="p-4 recurring-cost hidden">
+            <div class="flex justify-between items-center">
+              <div>
+                <div class="font-medium text-amber-700 flex items-center gap-1">
+                  <i class="fas fa-sync-alt"></i>
+                  Costo recurrente:
+                </div>
+                <div class="text-sm text-amber-600" id="support-cost">$0/mes</div>
+              </div>
+              <span class="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full">Mensual</span>
+            </div>
+          </div>
+          
+          <!-- Resumen de selecciones -->
+          <div class="bg-white p-5">
+            <h3 class="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+              <i class="fas fa-clipboard-list text-indigo-500"></i>
+              Resumen de selección
+            </h3>
+            <div class="space-y-3 text-sm">
+              <div class="summary-card p-3 rounded-lg">
+                <div class="text-gray-600">Región</div>
+                <div id="summary-region" class="font-medium">Latinoamérica (base)</div>
+              </div>
+              <div class="summary-card p-3 rounded-lg">
+                <div class="text-gray-600">Nivel automatización</div>
+                <div id="summary-automation" class="font-medium">Básica</div>
+              </div>
+              <div class="summary-card p-3 rounded-lg">
+                <div class="text-gray-600">Flujos</div>
+                <div id="summary-flows" class="font-medium">1</div>
+              </div>
+              <div class="summary-card p-3 rounded-lg">
+                <div class="text-gray-600">Uso de IA</div>
+                <div id="summary-ai" class="font-medium">Sin agente IA</div>
+              </div>
+              <div class="summary-card p-3 rounded-lg">
+                <div class="text-gray-600">Integración</div>
+                <div id="summary-integration" class="font-medium">1-2 sistemas</div>
+              </div>
+              <div class="summary-card p-3 rounded-lg">
+                <div class="text-gray-600">Soporte</div>
+                <div id="summary-support" class="font-medium">Sin soporte</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Botones de acción -->
+          <div class="p-4 bg-gray-50 rounded-b-2xl">
+            <div class="flex flex-col gap-3">
+              <button id="pdf-btn" type="button" class="floating-btn flex items-center justify-center gap-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg px-4 py-3 transition">
+                <i class="fas fa-file-pdf"></i>
+                Exportar PDF
+              </button>
+              <button id="mail-btn" type="button" class="floating-btn flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-4 py-3 transition">
+                <i class="fas fa-paper-plane"></i>
+                Enviar Email
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---- Parámetros de horas por componente ----
+    const HOURS = {
+      automation: { basic: 80, advanced: 240 },
+      ai: { none: 0, single: 40, multi: 160 },
+      integration: { simple: 40, complex: 120 },
+      flowExtra: 8, // por flujo adicional
+      support: { none: 0, basic: 20, advanced: 60 }
+    };
+
+    // ---- Tarifas promedio por región ----
+    const RATES = { 
+      latam: 45, 
+      na: 75, 
+      we: 60, 
+      ee: 35, 
+      asia: 30, 
+      africa: 25 
+    };
+
+    // ---- Elementos de UI ----
+    const form = document.getElementById('quote-form');
+    const regionSel = document.getElementById('region-select');
+    const hourlyRateEl = document.getElementById('hourly-rate');
+    const priceEl = document.getElementById('price-indicator');
+    const progressEl = document.getElementById('price-progress');
+    const flowEl = document.getElementById('automation-flows');
+    const flowValEl = document.getElementById('flow-value');
+    const supportContainer = document.getElementById('support-container');
+    const supportCostEl = document.getElementById('support-cost');
+    const notification = document.getElementById('notification');
+    const notificationText = document.getElementById('notification-text');
+    
+    // Elementos de horas
+    const autoHoursEl = document.getElementById('auto-hours');
+    const flowHoursEl = document.getElementById('flow-hours');
+    const aiHoursEl = document.getElementById('ai-hours');
+    const integHoursEl = document.getElementById('integ-hours');
+    const totalHoursEl = document.getElementById('total-hours');
+    
+    // Elementos de resumen
+    const summaryRegion = document.getElementById('summary-region');
+    const summaryAutomation = document.getElementById('summary-automation');
+    const summaryFlows = document.getElementById('summary-flows');
+    const summaryAI = document.getElementById('summary-ai');
+    const summaryIntegration = document.getElementById('summary-integration');
+    const summarySupport = document.getElementById('summary-support');
+    
+    // Mapeo de nombres para resumen
+    const OPTION_NAMES = {
+      automation: { basic: "Básica", advanced: "Avanzada" },
+      ai: { none: "Sin agente IA", single: "1 agente IA", multi: "Multiagente IA" },
+      integration: { simple: "1-2 sistemas", complex: "3+ sistemas" },
+      support: { none: "Sin soporte", basic: "Soporte básico", advanced: "Soporte avanzado" }
+    };
+
+    // Mostrar notificación
+    function showNotification(message, isSuccess = true) {
+      notificationText.textContent = message;
+      notification.className = isSuccess 
+        ? 'notification show bg-green-500' 
+        : 'notification show bg-red-500';
+      
+      setTimeout(() => {
+        notification.classList.remove('show');
+      }, 3000);
+    }
+
+    // Función para manejar la selección de tarjetas de opción
+    const setupOptionCards = () => {
+      // Nivel de automatización
+      const automationRadios = form.querySelectorAll('[name="automation-level"]');
+      automationRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+          // Actualizar clases visuales
+          document.querySelectorAll('[name="automation-level"]').forEach(r => {
+            r.closest('.option-card').classList.remove('selected');
+          });
+          radio.closest('.option-card').classList.add('selected');
+          calc();
+        });
+      });
+
+      // Uso de IA
+      const aiRadios = form.querySelectorAll('[name="ai-usage"]');
+      aiRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+          document.querySelectorAll('[name="ai-usage"]').forEach(r => {
+            r.closest('.option-card').classList.remove('selected');
+          });
+          radio.closest('.option-card').classList.add('selected');
+          calc();
+        });
+      });
+
+      // Soporte
+      const supportRadios = form.querySelectorAll('[name="support-level"]');
+      supportRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+          document.querySelectorAll('[name="support-level"]').forEach(r => {
+            r.closest('.option-card').classList.remove('selected');
+          });
+          radio.closest('.option-card').classList.add('selected');
+          calc();
+        });
+      });
+    };
+
+    // Actualizar resumen de selecciones
+    const updateSummary = () => {
+      summaryRegion.textContent = regionSel.options[regionSel.selectedIndex].text;
+      summaryAutomation.textContent = OPTION_NAMES.automation[form['automation-level'].value];
+      summaryFlows.textContent = flowEl.value;
+      summaryAI.textContent = OPTION_NAMES.ai[form['ai-usage'].value];
+      summaryIntegration.textContent = OPTION_NAMES.integration[document.getElementById('integration-level').value];
+      summarySupport.textContent = OPTION_NAMES.support[form['support-level'].value];
+    };
+
+    // Calcular presupuesto
+    const calc = () => {
+      const region = regionSel.value;
+      const rate = RATES[region];
+      hourlyRateEl.textContent = `$${rate}/h`;
+      
+      // Obtener valores seleccionados
+      const autoLevel = form['automation-level'].value;
+      const aiLevel = form['ai-usage'].value;
+      const integLevel = document.getElementById('integration-level').value;
+      const supLevel = form['support-level'].value;
+      const flows = +flowEl.value;
+      
+      // Calcular horas para cada componente
+      const autoHours = HOURS.automation[autoLevel];
+      const flowHours = Math.max(0, (flows - 1) * HOURS.flowExtra);
+      const aiHours = HOURS.ai[aiLevel];
+      const integHours = HOURS.integration[integLevel];
+      const supHours = HOURS.support[supLevel];
+      
+      // Total horas para desarrollo inicial
+      const devHours = autoHours + flowHours + aiHours + integHours;
+      
+      // Actualizar elementos de horas
+      autoHoursEl.textContent = `${autoHours} h`;
+      flowHoursEl.textContent = `${flowHours} h`;
+      aiHoursEl.textContent = `${aiHours} h`;
+      integHoursEl.textContent = `${integHours} h`;
+      totalHoursEl.textContent = `${devHours} h`;
+      
+      // Costo de desarrollo inicial
+      const devCost = Math.round(devHours * rate);
+      
+      // Manejar soporte recurrente
+      if (supHours > 0) {
+        const monthlyCost = Math.round(supHours * rate);
+        supportCostEl.textContent = `$${monthlyCost.toLocaleString('en-US')}/mes`;
+        supportContainer.classList.remove('hidden');
+      } else {
+        supportContainer.classList.add('hidden');
+      }
+      
+      // Actualizar precio
+      priceEl.textContent = `$${devCost.toLocaleString('en-US')}`;
+      
+      // Actualizar barra de progreso (escala lineal con máximo de $50,000)
+      const maxPrice = 50000;
+      const pct = Math.min(100, (devCost / maxPrice) * 100);
+      progressEl.style.width = pct + '%';
+      
+      // Actualizar resumen
+      updateSummary();
+    };
+
+    // ---- Exportar PDF mejorado ----
+    document.getElementById('pdf-btn').addEventListener('click', () => {
+      try {
+        // Usar jsPDF directamente desde window
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Encabezado
+        doc.setFontSize(18);
+        doc.setTextColor(40, 40, 40);
+        doc.text('Cotización de Automatización con IA', 20, 20);
+        doc.setFontSize(12);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Generado el: ' + new Date().toLocaleDateString('es-ES'), 20, 28);
+        
+        // Datos generales
+        doc.setFontSize(14);
+        doc.setTextColor(40, 40, 40);
+        doc.text('Detalles de la cotización', 20, 40);
+        
+        doc.setFontSize(11);
+        doc.setTextColor(80, 80, 80);
+        
+        // Tabla de datos
+        const details = [
+          ['Región', summaryRegion.textContent],
+          ['Nivel de automatización', summaryAutomation.textContent],
+          ['Flujos de automatización', summaryFlows.textContent],
+          ['Uso de IA', summaryAI.textContent],
+          ['Complejidad de integración', summaryIntegration.textContent],
+          ['Soporte mensual', summarySupport.textContent],
+          ['', ''],
+          ['Total horas de desarrollo', totalHoursEl.textContent],
+          ['Tarifa horaria', hourlyRateEl.textContent],
+          ['Presupuesto estimado', priceEl.textContent]
+        ];
+        
+        let y = 50;
+        details.forEach(([label, value]) => {
+          doc.text(label + ':', 20, y);
+          doc.text(value, 70, y);
+          y += 8;
+        });
+        
+        // Notas
+        y += 10;
+        doc.setFontSize(10);
+        doc.setTextColor(120, 120, 120);
+        doc.text('* El costo de soporte es recurrente mensual y no está incluido en el total', 20, y);
+        doc.text('* Precios basados en tarifas promedio de 2025 (remotecrew.io)', 20, y + 5);
+        
+        // Guardar
+        doc.save('cotizacion_ia.pdf');
+        
+        // Mostrar notificación
+        showNotification('PDF generado con éxito');
+      } catch (error) {
+        console.error('Error generando PDF:', error);
+        showNotification('Error generando el PDF', false);
+      }
+    });
+
+    // ---- Enviar Email mejorado ----
+    document.getElementById('mail-btn').addEventListener('click', () => {
+      try {
+        const subject = encodeURIComponent('Cotización IA - ' + priceEl.textContent);
+        
+        const bodyLines = [
+          'Hola,',
+          '',
+          'Te envío la cotización solicitada para el proyecto de automatización con IA:',
+          '',
+          `• Región: ${summaryRegion.textContent}`,
+          `• Nivel de automatización: ${summaryAutomation.textContent}`,
+          `• Flujos de automatización: ${summaryFlows.textContent}`,
+          `• Uso de IA: ${summaryAI.textContent}`,
+          `• Complejidad de integración: ${summaryIntegration.textContent}`,
+          `• Soporte mensual: ${summarySupport.textContent}`,
+          '',
+          `Total horas de desarrollo: ${totalHoursEl.textContent}`,
+          `Tarifa horaria: ${hourlyRateEl.textContent}`,
+          `Presupuesto estimado: ${priceEl.textContent}`,
+          '',
+          supportContainer.classList.contains('hidden') ? '' : `Costo recurrente de soporte: ${supportCostEl.textContent}`,
+          '',
+          '¿Te gustaría agendar una reunión para discutir los detalles?',
+          '',
+          '¡Saludos!'
+        ];
+        
+        const body = encodeURIComponent(bodyLines.join('\n'));
+        
+        // Abrir cliente de correo
+        window.location.href = `mailto:?subject=${subject}&body=${body}`;
+        
+        // Mostrar notificación
+        showNotification('Cliente de correo abierto');
+      } catch (error) {
+        console.error('Error enviando email:', error);
+        showNotification('Error al abrir el cliente de correo', false);
+      }
+    });
+
+    // ---- Eventos ----
+    form.addEventListener('input', calc);
+    form.addEventListener('change', calc);
+    regionSel.addEventListener('change', calc);
+    flowEl.addEventListener('input', () => {
+      flowValEl.textContent = flowEl.value;
+      calc();
+    });
+
+    // Inicializa
+    document.addEventListener('DOMContentLoaded', () => {
+      setupOptionCards();
+      calc();
+      
+      // Animación de destaque inicial
+      const sections = document.querySelectorAll('.highlight');
+      sections.forEach((section, index) => {
+        setTimeout(() => {
+          section.classList.add('highlight');
+          setTimeout(() => section.classList.remove('highlight'), 1500);
+        }, index * 300);
+      });
+    });
+  </script>
+</body>
+</html>
